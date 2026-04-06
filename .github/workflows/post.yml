@@ -2,8 +2,8 @@ name: Auto Post IG
 
 on:
   schedule:
-    - cron: '0 10 * * *'  # UTC 10:00 = 台灣時間 18:00
-  workflow_dispatch:  # 手動觸發
+    - cron: '0 10 * * *'
+  workflow_dispatch:
 
 jobs:
   post:
@@ -18,7 +18,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install Pillow requests cloudinary google-generativeai
+          pip install --upgrade pip
+          pip install Pillow requests cloudinary google-genai
+          pip list | grep google
 
       - name: Run main script
         env:
