@@ -20,10 +20,12 @@ def send_telegram(message):
 
 def get_pending_pages():
     response = notion.databases.query(
-        database_id=DATABASE_ID,
-        filter={
-            "property": "狀態",
-            "select": {"equals": "待發"}
+        **{
+            "database_id": DATABASE_ID,
+            "filter": {
+                "property": "狀態",
+                "select": {"equals": "待發"}
+            }
         }
     )
     return response["results"]
