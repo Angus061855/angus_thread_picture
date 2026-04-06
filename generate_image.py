@@ -1,33 +1,119 @@
+import os
+import requests
+import cloudinary
+import cloudinary.uploader
+from notion_client import Client
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
+import io
 
-def generate_quote_image(main_text, sub_text, output_path="output.png"):
-    # 畫布設定
-    W, H = 1080, 1080
-    img = Image.new("RGB", (W, H), color=(10, 10, 10))
-    draw = ImageDraw.Draw(img)
+# 初始化
+notion = Client(auth=os.environ["NOTION_TOKEN"])
+DATABASE_ID = "33a11a316c9e80b793f3eeb04850b385"
 
-    # 字型（GitHub Actions 用系統字型）
+cloudinary.config(
+    cloud_name=os.environ["CLOUDINARY_CLOUD_NAME"],
+    api_key=os.environ["CLOUDINARY_API_KEY"],
+    api_secret=os.environ["CLOUDINARY_API_SECRET"]
+)
+
+def get_pending_pages():
+    response = notion.databases.query(
+        database_id=DATABASE_ID,
+        filter={
+            "property": "狀態",
+            "select": {"equals": "待發"}
+        }
+    )
+    return response["results"]
+
+def generate_image(text):
+    # 載入背景圖
+    bg = Image.open("back.png").convert("RGBA")
+    draw = ImageDraw.Draw(bg)
+
+    # 字型設定（白色，統一大小）
     try:
-        font_big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 72)
-        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 48)
+        font = ImageFont.truetype("NotoSansTC-Bold.ttf", 60)
+        small_font = ImageFont.truetype("NotoSansTC-Bold.ttf", 30)
     except:
-        font_big = ImageFont.load_default()
-        font_small = ImageFont.load_default()
+        font = ImageFont.load_default()
+        small_font = font
 
-    # 主文字（白色）
-    lines = textwrap.wrap(main_text, width=12)
-    y = 300
+    W, H = bg.size
+
+    # 文字換行處理
+    lines = text.split("\n")
+    line_height = 80
+    total_height = len(lines) * line_height
+    y = (H - total_height) // 2
+
     for line in lines:
-        bbox = draw.textbbox((0, 0), line, font=font_big)
-        w = bbox[2] - bbox[0]
-        draw.text(((W - w) / 2, y), line, font=font_big, fill=(255, 255, 255))
-        y += 90
+        bbox = draw.textbbox((0, 0), line, font=font)
+        text_w = bbox[2] - bbox[0]
+        x = (W - text_w) // 2
+        draw.text((x, y), line, font=font, fill="white")
+        y += line_height
 
-    # 副文字（金色）
-    bbox = draw.textbbox((0, 0), sub_text, font=font_small)
-    w = bbox[2] - bbox[0]
-    draw.text(((W - w) / 2, y + 40), sub_text, font=font_small, fill=(212, 175, 55))
+    # 底部 @帳號
+    account = "@angus061855"
+    bbox = draw.textbbox((0, 0), account, font=small_font)
+    acc_w = bbox[2] - bbox[0]
+    draw.text(((W - acc_w) // 2, H - 80), account, font=small_font, fill="white")
 
-    img.save(output_path)
-    print(f"圖片已生成：{output_path}")
+    # 儲存到記憶體
+    img_byte_arr = io.BytesIO()
+    bg.save(img_byte_arr, format="PNG")
+    img_byte_arr.seek(0)
+    return img_byte_arr
+
+def upload_to_cloudinary(image_bytes, public_id):
+    result = cloudinary.uploader.upload(
+        image_bytes,
+        public_id=public_id,
+        overwrite=True,
+        resource_type="image"
+    )
+    return result["secure_url"]
+
+def update_notion_image_url(page_id, image_url):
+    notion.pages.update(
+        page_id=page_id,
+        properties={
+            "圖片網址": {
+                "url": image_url
+            }
+        }
+    )
+
+def main():
+    pages = get_pending_pages()
+    print(f"找到 {len(pages)} 筆待發文章")
+
+    for page in pages:
+        page_id = page["id"]
+        props = page["properties"]
+
+        # 取得主題（圖片文字）
+        title_list = props.get("主題", {}).get("title", [])
+        topic = title_list[0]["plain_text"] if title_list else ""
+
+        if not topic:
+            print(f"跳過 {page_id}：主題為空")
+            continue
+
+        print(f"處理：{topic}")
+
+        # 生成圖片
+        image_bytes = generate_image(topic)
+
+        # 上傳到 Cloudinary
+        safe_id = page_id.replace("-", "")
+        image_url = upload_to_cloudinary(image_bytes, f"ig_post_{safe_id}")
+
+        # 更新 Notion 圖片網址
+        update_notion_image_url(page_id, image_url)
+        print(f"圖片已上傳：{image_url}")
+
+if __name__ == "__main__":
+    main()
