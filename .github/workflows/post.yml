@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install notion-client cloudinary pillow requests
+          pip install notion-client==2.2.1 cloudinary pillow requests
 
       - name: Download font
         run: |
