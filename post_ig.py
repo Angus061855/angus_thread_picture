@@ -12,11 +12,14 @@ TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 def send_telegram(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    requests.post(url, data={
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": message
-    })
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        requests.post(url, data={
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message
+        }, timeout=15)
+    except Exception as e:
+        print(f"Telegram 通知失敗：{e}")
 
 def get_pending_pages():
     response = notion.databases.query(
@@ -25,7 +28,8 @@ def get_pending_pages():
             "filter": {
                 "property": "狀態",
                 "status": {"equals": "待發"}
-            }
+            },
+            "page_size": 1
         }
     )
     return response["results"]
@@ -37,8 +41,9 @@ def post_to_instagram(image_url, caption):
         "image_url": image_url,
         "caption": caption,
         "access_token": IG_ACCESS_TOKEN
-    })
+    }, timeout=30)
     container_data = container_res.json()
+    print(f"容器回應：{container_data}")
 
     if "id" not in container_data:
         raise Exception(f"建立容器失敗：{container_data}")
@@ -50,8 +55,9 @@ def post_to_instagram(image_url, caption):
     publish_res = requests.post(publish_url, data={
         "creation_id": creation_id,
         "access_token": IG_ACCESS_TOKEN
-    })
+    }, timeout=30)
     publish_data = publish_res.json()
+    print(f"發布回應：{publish_data}")
 
     if "id" not in publish_data:
         raise Exception(f"發布失敗：{publish_data}")
@@ -72,39 +78,47 @@ def main():
     pages = get_pending_pages()
     print(f"找到 {len(pages)} 筆待發文章")
 
-    for page in pages:
-        page_id = page["id"]
-        props = page["properties"]
+    if not pages:
+        print("沒有待發文章")
+        send_telegram("ℹ️ 帳號A：今天沒有待發文章")
+        return
 
-        # 取得圖片網址
-        image_url = props.get("圖片網址", {}).get("url", "")
+    page = pages[0]  # 一次只發一篇
+    page_id = page["id"]
+    props = page["properties"]
 
-        # 取得文案
-        rich_text = props.get("文案", {}).get("rich_text", [])
-        caption = rich_text[0]["plain_text"] if rich_text else ""
+    # 取得圖片網址
+    image_url = props.get("圖片網址", {}).get("url", "")
 
-        if not image_url:
-            msg = f"❌ 帳號A IG發文失敗：圖片網址為空（{page_id}）"
-            print(msg)
-            send_telegram(msg)
-            continue
+    # 取得文案
+    rich_text = props.get("文案", {}).get("rich_text", [])
+    caption = rich_text[0]["plain_text"] if rich_text else ""
 
-        if not caption:
-            msg = f"❌ 帳號A IG發文失敗：文案為空（{page_id}）"
-            print(msg)
-            send_telegram(msg)
-            continue
+    print(f"圖片網址：{image_url}")
+    print(f"文案長度：{len(caption)} 字")
 
-        try:
-            post_id = post_to_instagram(image_url, caption)
-            update_notion_status(page_id)
-            msg = f"✅ 帳號A IG已發\n貼文ID：{post_id}"
-            print(msg)
-            send_telegram(msg)
-        except Exception as e:
-            msg = f"❌ 帳號A IG發文失敗：{str(e)}"
-            print(msg)
-            send_telegram(msg)
+    if not image_url:
+        msg = f"❌ 帳號A IG發文失敗：圖片網址為空（{page_id}）"
+        print(msg)
+        send_telegram(msg)
+        return
+
+    if not caption:
+        msg = f"❌ 帳號A IG發文失敗：文案為空（{page_id}）"
+        print(msg)
+        send_telegram(msg)
+        return
+
+    try:
+        post_id = post_to_instagram(image_url, caption)
+        update_notion_status(page_id)
+        msg = f"✅ 帳號A IG已發\n貼文ID：{post_id}"
+        print(msg)
+        send_telegram(msg)
+    except Exception as e:
+        msg = f"❌ 帳號A IG發文失敗：{str(e)}"
+        print(msg)
+        send_telegram(msg)
 
 if __name__ == "__main__":
     main()
