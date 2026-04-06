@@ -18,16 +18,15 @@ cloudinary.config(
 )
 
 def get_pending_pages():
-    # ✅ 修正：改用 notion.databases.query 並傳入 database_id 作為位置參數
     response = notion.databases.query(
-    **{
-        "database_id": DATABASE_ID,
-        "filter": {
-            "property": "狀態",
-            "status": {"equals": "待發"}  # ✅ 正確類型
+        **{
+            "database_id": DATABASE_ID,
+            "filter": {
+                "property": "狀態",
+                "status": {"equals": "待發"}
+            }
         }
-    }
-)
+    )
     return response["results"]
 
 def generate_image(text):
