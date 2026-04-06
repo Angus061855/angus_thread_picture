@@ -1,4 +1,9 @@
-Pillow
-requests
-cloudinary
-google-generativeai
+id: requirements
+name: requirements.txt
+type: code.txt
+content: |-
+  notion-client
+  google-generativeai
+  requests
+  Pillow
+  python-dotenv
