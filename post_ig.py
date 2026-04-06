@@ -63,7 +63,7 @@ def update_notion_status(page_id):
         page_id=page_id,
         properties={
             "狀態": {
-                "select": {"name": "已發布"}
+                "status": {"name": "已發布"}
             }
         }
     )
