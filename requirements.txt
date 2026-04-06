@@ -3,7 +3,8 @@ name: requirements.txt
 type: code.txt
 content: |-
   notion-client
-  google-generativeai
+  google-genai
   requests
   Pillow
   python-dotenv
+  cloudinary
