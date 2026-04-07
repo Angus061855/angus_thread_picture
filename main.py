@@ -145,16 +145,14 @@ def create_image(text, output_path="output.png"):
         line_w = get_line_width(line, main_font, letter_spacing)
         x = (width - line_w) // 2
 
-        # 逐字繪製（帶字距 + 加粗描邊）
+        # 逐字繪製（帶字距，無加粗）
         cursor_x = x
         for char in line:
             draw.text(
                 (cursor_x, current_y),
                 char,
                 font=main_font,
-                fill="white",
-                stroke_width=stroke_width,
-                stroke_fill="white"
+                fill="white"
             )
             char_bbox = draw.textbbox((0, 0), char, font=main_font)
             cursor_x += (char_bbox[2] - char_bbox[0]) + letter_spacing
