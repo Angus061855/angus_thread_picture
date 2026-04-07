@@ -127,14 +127,27 @@ def create_image(text, output_path="output.png"):
     line_spacing = int(font_size * 0.5)
     total_text_height = sum(line_heights) + line_spacing * (len(lines) - 1)
 
-    start_y = (height - total_text_height) // 2 - int(height * 0.05)
+    start_y = (height - total_text_height) // 2 - int(height * 0.07)
+
+   # ===== 陰影參數 =====
+    import math
+    shadow_offset = 50          # 偏移距離
+    shadow_angle = -45          # 方向（度）
+    shadow_color = (120, 0, 200, 255)  # 紫色，透明度 100%
+    shadow_dx = int(math.cos(math.radians(shadow_angle)) * shadow_offset)
+    shadow_dy = int(math.sin(math.radians(shadow_angle)) * shadow_offset)
 
     current_y = start_y
     for i, line in enumerate(lines):
         bbox = draw.textbbox((0, 0), line, font=main_font)
         text_width = bbox[2] - bbox[0]
         x = (width - text_width) // 2
+
+        # 先畫陰影
+        draw.text((x + shadow_dx, current_y + shadow_dy), line, font=main_font, fill=shadow_color)
+        # 再畫本體
         draw.text((x, current_y), line, font=main_font, fill="white")
+
         current_y += line_heights[i] + line_spacing
 
     watermark = "@angus061855"
