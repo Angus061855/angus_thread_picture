@@ -176,12 +176,22 @@ def create_caption(topic_text):
 - 請直接輸出文案，不要加任何前綴說明。
 """
 
-    response = client.models.generate_content(
-        model="gemma-4-31b-it",
-        contents=prompt
-    )
-    caption = response.text.strip()
-    return caption
+   attempt = 0
+    while True:
+        attempt += 1
+        try:
+            print(f"第 {attempt} 次嘗試生成文案...")
+            response = client.models.generate_content(
+                model="gemma-4-31b-it",
+                contents=prompt
+            )
+            caption = response.text.strip()
+            print("文案生成成功")
+            return caption
+        except Exception as e:
+            print(f"失敗：{e}")
+            print("10 秒後重試...")
+            time.sleep(10)
 
 
 # ========== Notion 查詢 ==========
