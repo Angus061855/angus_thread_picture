@@ -34,8 +34,9 @@ NOTION_HEADERS = {
 # ========== 字元檢查 ==========
 def has_unsupported_chars(text, font_size=40):
     try:
-        font = ImageFont.truetype("ChenYuluoyan-2.0-Thin.ttf", font_size)
-    except:
+        font = ImageFont.truetype("辰宇落雁體.ttf", font_size)
+    except Exception as e:
+        print(f"字體載入失敗：{e}")
         return list(text)
 
     unsupported = []
@@ -45,11 +46,16 @@ def has_unsupported_chars(text, font_size=40):
     for char in text:
         if char in " \n，。？！、「」《》…：":
             continue
-        bbox = test_draw.textbbox((0, 0), char, font=font)
-        if bbox[2] - bbox[0] == 0:
-            unsupported.append(char)
+        try:
+            bbox = test_draw.textbbox((0, 0), char, font=font)
+            if bbox[2] - bbox[0] == 0:
+                unsupported.append(char)
+        except OSError:
+            # 辰宇落雁體會觸發 too many function definitions，直接跳過
+            break
 
     return unsupported
+
 
 
 # ========== Notion 狀態更新 ==========
