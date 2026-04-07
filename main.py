@@ -37,42 +37,37 @@ def create_image(text, output_path="output.png"):
     width, height = bg.size
     draw = ImageDraw.Draw(bg)
 
-    main_font_size = int(width * 0.08)
     watermark_font_size = int(width * 0.03)
-
-    main_font = ImageFont.truetype("ChiKuSung.otf", main_font_size)
-    watermark_font = ImageFont.truetype("ChiKuSung.otf", watermark_font_size)
 
     lines = text.strip().split("\n")
     lines = [line.strip() for line in lines if line.strip()]
 
-    # 設定最大文字寬度（控制內縮）
+    # ✅ 最大可用寬度（左右各留 17.5% 空白）
     max_text_width = int(width * 0.65)
 
-    # 自動換行
-    wrapped_lines = []
-    for line in lines:
-        words = list(line)
-        current_line = ""
-        for char in words:
-            test_line = current_line + char
-            bbox = draw.textbbox((0, 0), test_line, font=main_font)
-            if bbox[2] - bbox[0] > max_text_width and current_line:
-                wrapped_lines.append(current_line)
-                current_line = char
-            else:
-                current_line = test_line
-        if current_line:
-            wrapped_lines.append(current_line)
+    # ✅ 自動找合適字體大小：從大到小試，直到每行都放得下
+    font_size = int(width * 0.10)
+    while font_size > 20:
+        main_font = ImageFont.truetype("ChiKuSung.otf", font_size)
+        too_wide = False
+        for line in lines:
+            bbox = draw.textbbox((0, 0), line, font=main_font)
+            if bbox[2] - bbox[0] > max_text_width:
+                too_wide = True
+                break
+        if not too_wide:
+            break
+        font_size -= 2
 
-    lines = wrapped_lines
+    main_font = ImageFont.truetype("ChiKuSung.otf", font_size)
+    watermark_font = ImageFont.truetype("ChiKuSung.otf", watermark_font_size)
 
     line_heights = []
     for line in lines:
         bbox = draw.textbbox((0, 0), line, font=main_font)
         line_heights.append(bbox[3] - bbox[1])
 
-    line_spacing = int(main_font_size * 0.6)
+    line_spacing = int(font_size * 0.6)
     total_text_height = sum(line_heights) + line_spacing * (len(lines) - 1)
 
     start_y = (height - total_text_height) // 2 - int(height * 0.05)
@@ -95,6 +90,7 @@ def create_image(text, output_path="output.png"):
     bg.convert("RGB").save(output_path, "PNG")
     print(f"圖片已生成：{output_path}")
     return output_path
+
 
 
 
