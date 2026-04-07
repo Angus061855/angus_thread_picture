@@ -100,16 +100,25 @@ def create_image(text, output_path="output.png"):
     lines = text.strip().split("\n")
     lines = [line.strip() for line in lines if line.strip()]
 
-    margin = int(width * 0.10)  # 左右各留 10%
-    max_text_width = width - (margin * 2)  # 可用寬度 = 80%
+    margin = int(width * 0.10)
+    max_text_width = width - (margin * 2)
+
+    # ===== 字距設定 =====
+    letter_spacing = 6  # 每個字之間額外加的像素，可調整
+
+    def get_line_width(line, font, spacing):
+        total = 0
+        for char in line:
+            bbox = draw.textbbox((0, 0), char, font=font)
+            total += (bbox[2] - bbox[0]) + spacing
+        return total - spacing  # 最後一個字不加
 
     font_size = int(width * 0.18)
     while font_size > 20:
         main_font = ImageFont.truetype("漢字之美仿宋.ttf", font_size)
         too_wide = False
         for line in lines:
-            bbox = draw.textbbox((0, 0), line, font=main_font)
-            if bbox[2] - bbox[0] > max_text_width:
+            if get_line_width(line, main_font, letter_spacing) > max_text_width:
                 too_wide = True
                 break
         if not too_wide:
@@ -126,27 +135,29 @@ def create_image(text, output_path="output.png"):
 
     line_spacing = int(font_size * 0.5)
     total_text_height = sum(line_heights) + line_spacing * (len(lines) - 1)
+    start_y = (height - total_text_height) // 2 - int(height * 0.05)
 
-    start_y = (height - total_text_height) // 2 - int(height * 0.07)
-
-   # ===== 陰影參數 =====
-    import math
-    shadow_offset = 50          # 偏移距離
-    shadow_angle = -45          # 方向（度）
-    shadow_color = (120, 0, 200, 255)  # 紫色，透明度 100%
-    shadow_dx = int(math.cos(math.radians(shadow_angle)) * shadow_offset)
-    shadow_dy = int(math.sin(math.radians(shadow_angle)) * shadow_offset)
+    # ===== 加粗描邊粗細 =====
+    stroke_width = max(1, font_size // 30)  # 字越大描邊越粗，可調整
 
     current_y = start_y
     for i, line in enumerate(lines):
-        bbox = draw.textbbox((0, 0), line, font=main_font)
-        text_width = bbox[2] - bbox[0]
-        x = (width - text_width) // 2
+        line_w = get_line_width(line, main_font, letter_spacing)
+        x = (width - line_w) // 2
 
-        # 先畫陰影
-        draw.text((x + shadow_dx, current_y + shadow_dy), line, font=main_font, fill=shadow_color)
-        # 再畫本體
-        draw.text((x, current_y), line, font=main_font, fill="white")
+        # 逐字繪製（帶字距 + 加粗描邊）
+        cursor_x = x
+        for char in line:
+            draw.text(
+                (cursor_x, current_y),
+                char,
+                font=main_font,
+                fill="white",
+                stroke_width=stroke_width,
+                stroke_fill="white"
+            )
+            char_bbox = draw.textbbox((0, 0), char, font=main_font)
+            cursor_x += (char_bbox[2] - char_bbox[0]) + letter_spacing
 
         current_y += line_heights[i] + line_spacing
 
