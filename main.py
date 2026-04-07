@@ -103,15 +103,14 @@ def create_image(text, output_path="output.png"):
     margin = int(width * 0.10)
     max_text_width = width - (margin * 2)
 
-    # ===== 字距設定 =====
-    letter_spacing = 6  # 每個字之間額外加的像素，可調整
+    letter_spacing = 6
 
     def get_line_width(line, font, spacing):
         total = 0
         for char in line:
             bbox = draw.textbbox((0, 0), char, font=font)
             total += (bbox[2] - bbox[0]) + spacing
-        return total - spacing  # 最後一個字不加
+        return total - spacing
 
     font_size = int(width * 0.18)
     while font_size > 20:
@@ -129,36 +128,32 @@ def create_image(text, output_path="output.png"):
     watermark_font = ImageFont.truetype("漢字之美仿宋.ttf", watermark_font_size)
 
     line_heights = []
-for line in lines:
-    bbox = draw.textbbox((0, 0), line, font=main_font)
-    line_heights.append(bbox[3] - bbox[1])
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=main_font)
+        line_heights.append(bbox[3] - bbox[1])
 
-line_spacing = int(font_size * 0.5)
-total_text_height = sum(line_heights) + line_spacing * (len(lines) - 1)
+    line_spacing = int(font_size * 0.5)
+    total_text_height = sum(line_heights) + line_spacing * (len(lines) - 1)
 
-# ✅ 不管幾行，整個區塊都垂直置中
-start_y = (height - total_text_height) // 2
+    start_y = (height - total_text_height) // 2
 
-current_y = start_y
-for i, line in enumerate(lines):
-    line_w = get_line_width(line, main_font, letter_spacing)
-    
-    # ✅ 每一行都水平置中
-    x = (width - line_w) // 2
+    current_y = start_y
+    for i, line in enumerate(lines):
+        line_w = get_line_width(line, main_font, letter_spacing)
+        x = (width - line_w) // 2
 
-    cursor_x = x
-    for char in line:
-        draw.text(
-            (cursor_x, current_y),
-            char,
-            font=main_font,
-            fill="white"
-        )
-        char_bbox = draw.textbbox((0, 0), char, font=main_font)
-        cursor_x += (char_bbox[2] - char_bbox[0]) + letter_spacing
+        cursor_x = x
+        for char in line:
+            draw.text(
+                (cursor_x, current_y),
+                char,
+                font=main_font,
+                fill="white"
+            )
+            char_bbox = draw.textbbox((0, 0), char, font=main_font)
+            cursor_x += (char_bbox[2] - char_bbox[0]) + letter_spacing
 
-    current_y += line_heights[i] + line_spacing
-
+        current_y += line_heights[i] + line_spacing
 
     watermark = "@angus061855"
     wm_bbox = draw.textbbox((0, 0), watermark, font=watermark_font)
