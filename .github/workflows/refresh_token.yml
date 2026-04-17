@@ -19,7 +19,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install requests pynacl
 
       - name: Refresh IG Access Token
         env:
@@ -33,6 +33,8 @@ jobs:
           import requests
           import os
           import sys
+          import base64
+          from nacl import encoding, public
 
           token = os.environ["IG_ACCESS_TOKEN"]
           app_id = os.environ["IG_APP_ID"]
@@ -40,13 +42,17 @@ jobs:
           gh_pat = os.environ["GH_PAT"]
           repo = os.environ["REPO"]
 
-          # 換新 token
-          refresh_url = (
-              f"https://graph.instagram.com/refresh_access_token"
-              f"?grant_type=ig_refresh_token&access_token={token}"
-          )
-          res = requests.get(refresh_url)
+          # 換新 token（使用 Facebook Graph API）
+          refresh_url = "https://graph.facebook.com/oauth/access_token"
+          params = {
+              "grant_type": "fb_exchange_token",
+              "client_id": app_id,
+              "client_secret": app_secret,
+              "fb_exchange_token": token
+          }
+          res = requests.get(refresh_url, params=params)
           data = res.json()
+          print(f"換新回應：{data}")
 
           if "access_token" not in data:
               print(f"換新失敗：{data}")
@@ -55,10 +61,6 @@ jobs:
           new_token = data["access_token"]
           expires_in = data.get("expires_in", "unknown")
           print(f"換新成功，有效期：{expires_in} 秒")
-
-          # 更新 GitHub Secret
-          import base64
-          from nacl import encoding, public
 
           # 取得 repo public key
           headers = {
@@ -91,6 +93,3 @@ jobs:
               print(f"GitHub Secret 更新失敗：{update_res.text}")
               sys.exit(1)
           EOF
-
-      - name: Install PyNaCl
-        run: pip install pynacl
